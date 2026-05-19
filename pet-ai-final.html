@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>반려동물 증상 AI 상담</title>
+<meta name="theme-color" content="#3D6B2F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="펫 상담">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; font-family: 'Noto Sans KR', sans-serif; background: #F7F5F0; color: #1A1A1A; }
+
+/* ── API 키 입력 화면 ── */
+#setup-screen {
+  position: fixed; inset: 0;
+  background: #F7F5F0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 100;
+}
+.setup-card {
+  background: #fff;
+  border: 1px solid #E2DDD5;
+  border-radius: 20px;
+  padding: 32px 28px;
+  width: 100%; max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+.setup-logo { font-size: 40px; text-align: center; margin-bottom: 16px; }
+.setup-title { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.setup-desc { font-size: 13px; color: #5A5A5A; text-align: center; line-height: 1.6; margin-bottom: 24px; }
+.setup-label { font-size: 13px; font-weight: 500; color: #1A1A1A; margin-bottom: 8px; display: block; }
+.setup-input {
+  width: 100%; padding: 12px 14px;
+  border: 1px solid #E2DDD5; border-radius: 12px;
+  font-size: 14px; font-family: 'Noto Sans KR', sans-serif;
+  outline: none; margin-bottom: 8px;
+  background: #F7F5F0;
+}
+.setup-input:focus { border-color: #3D6B2F; background: #fff; }
+.setup-hint { font-size: 11px; color: #9A9A9A; margin-bottom: 20px; line-height: 1.5; }
+.setup-hint a { color: #3D6B2F; }
+.setup-btn {
+  width: 100%; padding: 14px;
+  background: #3D6B2F; color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 500;
+  font-family: 'Noto Sans KR', sans-serif;
+  cursor: pointer; transition: opacity .15s;
+}
+.setup-btn:hover { opacity: .88; }
+.setup-err { font-size: 12px; color: #C0392B; margin-top: 10px; text-align: center; display: none; }
+
+/* ── 메인 앱 ── */
+#app { display: none; flex-direction: column; height: 100vh; }
+
+header {
+  flex-shrink: 0; background: #fff;
+  border-bottom: 1px solid #E2DDD5;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.logo {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: #EAF3DE;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.header-text h1 { font-size: 15px; font-weight: 700; }
+.header-text p { font-size: 11px; color: #5A5A5A; margin-top: 1px; }
+.change-key-btn {
+  margin-left: auto; background: none; border: 1px solid #E2DDD5;
+  border-radius: 20px; padding: 5px 10px;
+  font-size: 11px; color: #9A9A9A;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+}
+
+#chat-wrap {
+  flex: 1; overflow-y: auto;
+  padding: 16px 14px;
+  display: flex; flex-direction: column; gap: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.msg { display: flex; gap: 8px; align-items: flex-start; }
+.msg.user { flex-direction: row-reverse; }
+
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #EAF3DE;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0; margin-top: 2px;
+}
+.msg.user .avatar { background: #F0EDE6; }
+
+.bubble-wrap { display: flex; flex-direction: column; gap: 6px; max-width: 84%; }
+.msg.user .bubble-wrap { align-items: flex-end; }
+
+.bubble {
+  padding: 10px 13px;
+  border-radius: 4px 14px 14px 14px;
+  font-size: 14px; line-height: 1.65;
+  background: #F0EDE6; border: 1px solid #E2DDD5;
+  word-break: keep-all;
+}
+.msg.user .bubble {
+  background: #3D6B2F; color: #fff;
+  border-color: transparent;
+  border-radius: 14px 4px 14px 14px;
+}
+
+.typing-bubble {
+  display: flex; gap: 5px; align-items: center;
+  padding: 12px 14px;
+  background: #F0EDE6; border: 1px solid #E2DDD5;
+  border-radius: 4px 14px 14px 14px;
+  width: fit-content;
+}
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #9A9A9A; animation: blink 1.3s infinite;
+}
+.dot:nth-child(2) { animation-delay: .2s; }
+.dot:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+
+.urgency-card {
+  border-radius: 12px; padding: 11px 13px;
+  font-size: 13px; line-height: 1.6; border: 1px solid;
+}
+.urg-low  { background: #EAF3DE; border-color: #639922; color: #1C4A08; }
+.urg-mid  { background: #FAEEDA; border-color: #B85C1A; color: #5A2A06; }
+.urg-high { background: #FDECEA; border-color: #C0392B; color: #5A0A08; }
+.urg-label { font-weight: 700; font-size: 12px; margin-bottom: 5px; }
+
+.pet-select { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.pet-btn {
+  padding: 8px 14px; border-radius: 10px;
+  border: 1px solid #E2DDD5; background: #fff;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 13px; cursor: pointer; color: #5A5A5A;
+  transition: all .15s;
+}
+.pet-btn:active { transform: scale(0.95); }
+.pet-btn.selected { background: #EAF3DE; border-color: #3D6B2F; color: #3D6B2F; font-weight: 500; }
+
+.input-wrap {
+  flex-shrink: 0; background: #fff;
+  border-top: 1px solid #E2DDD5;
+  padding: 10px 14px 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+.input-area {
+  display: flex; align-items: flex-end; gap: 10px;
+  background: #F0EDE6; border: 1px solid #E2DDD5;
+  border-radius: 24px; padding: 10px 14px;
+}
+#user-input {
+  flex: 1; border: none; outline: none;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 15px; color: #1A1A1A;
+  background: transparent; resize: none;
+  min-height: 22px; max-height: 80px; line-height: 1.5;
+}
+#user-input::placeholder { color: #9A9A9A; }
+#send-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #3D6B2F; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+#send-btn:disabled { opacity: .3; }
+.disclaimer {
+  font-size: 10px; color: #9A9A9A;
+  text-align: center; margin-top: 6px; line-height: 1.5;
+}
+</style>
+</head>
+<body>
+
+<!-- ── API 키 입력 화면 ── -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-logo">🐾</div>
+    <p class="setup-title">반려동물 증상 AI 상담</p>
+    <p class="setup-desc">시작하려면 Anthropic API 키가 필요해요.<br>키는 이 기기에만 저장되고 외부로 전송되지 않아요.</p>
+    <label class="setup-label">API 키 입력</label>
+    <input class="setup-input" id="api-key-input" type="password" placeholder="sk-ant-api03-..." />
+    <p class="setup-hint">
+      아직 키가 없으신가요?<br>
+      <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → 가입 → "API Keys" → "Create Key"<br>
+      발급받은 키를 위에 붙여넣으세요.
+    </p>
+    <button class="setup-btn" id="start-btn">시작하기</button>
+    <p class="setup-err" id="setup-err">올바른 API 키를 입력해주세요 (sk-ant-로 시작)</p>
+  </div>
+</div>
+
+<!-- ── 메인 앱 ── -->
+<div id="app">
+  <header>
+    <div class="logo">🐾</div>
+    <div class="header-text">
+      <h1>반려동물 증상 AI</h1>
+      <p>babungee 수의사 데이터 기반</p>
+    </div>
+    <button class="change-key-btn" id="change-key-btn">키 변경</button>
+  </header>
+
+  <div id="chat-wrap"></div>
+
+  <div class="input-wrap">
+    <div class="input-area">
+      <textarea id="user-input" placeholder="증상을 입력해 주세요..." rows="1"></textarea>
+      <button id="send-btn" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+    <p class="disclaimer">※ AI 상담은 진료를 대체하지 않습니다. 응급 상황 시 즉시 동물병원을 방문하세요.</p>
+  </div>
+</div>
+
+<script>
+const SYSTEM = `당신은 반려동물 증상 AI 상담사입니다.
+네이버 지식in에서 수년간 보호자들의 질문에 답해온 수의사(babungee)의 실제 상담 데이터를 기반으로 학습되었습니다.
+
+【답변 스타일】
+- 항상 한국어
+- 따뜻하지만 핵심을 놓치지 않는 전문적 말투
+- 줄바꿈을 활용해 읽기 쉽게
+- 한 번에 1~2개의 핵심 질문만
+- 문장 끝 "..." 스타일
+
+【흐름】
+1. 증상 입력 → 공감 + 핵심 추가 질문 1~2개
+2. 3~5번 수집 후 긴급도 평가
+3. 평가 시 JSON 포함: {"urgency":"low","reason":"이유","advice":"조언"}
+   urgency: low(관찰가능) | mid(48~72시간내진료) | high(즉시병원)
+4. 정확한 진단은 수의사만 가능함을 인지
+5. 반려동물 이름 나오면 이름으로 불러줄 것
+6. 응급상황(청색증,의식소실,심한호흡곤란)은 즉시 high 판정`;
+
+let apiKey = localStorage.getItem('pet_api_key') || '';
+let selectedPet = null, petName = null, history = [], step = 0;
+
+const chatWrap   = document.getElementById('chat-wrap');
+const inputEl    = document.getElementById('user-input');
+const sendBtn    = document.getElementById('send-btn');
+const setupScreen= document.getElementById('setup-screen');
+const appEl      = document.getElementById('app');
+const apiInput   = document.getElementById('api-key-input');
+const setupErr   = document.getElementById('setup-err');
+
+// ── 저장된 키 있으면 바로 시작 ──
+if (apiKey) launchApp();
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  const key = apiInput.value.trim();
+  if (!key.startsWith('sk-ant-')) { setupErr.style.display = 'block'; return; }
+  apiKey = key;
+  localStorage.setItem('pet_api_key', key);
+  launchApp();
+});
+
+document.getElementById('change-key-btn').addEventListener('click', () => {
+  localStorage.removeItem('pet_api_key');
+  location.reload();
+});
+
+function launchApp() {
+  setupScreen.style.display = 'none';
+  appEl.style.display = 'flex';
+  if (chatWrap.children.length === 0) showPetSelect();
+}
+
+// ── 메시지 렌더 ──
+function scrollBottom() { chatWrap.scrollTop = chatWrap.scrollHeight; }
+
+function addMsg(role, text, urgency) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const av = document.createElement('div');
+  av.className = 'avatar';
+  av.textContent = role === 'ai' ? '🐾' : '😊';
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = text.replace(/\n/g, '<br>');
+  wrap.appendChild(bubble);
+  if (urgency) {
+    const card = document.createElement('div');
+    const cls = urgency.urgency === 'high' ? 'urg-high' : urgency.urgency === 'mid' ? 'urg-mid' : 'urg-low';
+    const label = urgency.urgency === 'high' ? '🚨 긴급 — 즉시 병원 방문'
+                : urgency.urgency === 'mid'  ? '⚠️ 주의 — 48~72시간 내 진료 권장'
+                                             : '✅ 관찰 — 가정에서 모니터링 가능';
+    card.className = 'urgency-card ' + cls;
+    card.innerHTML = `<div class="urg-label">${label}</div>
+      <div style="margin-bottom:4px">${urgency.reason}</div>
+      <div style="font-size:12px;opacity:.85">${urgency.advice}</div>`;
+    wrap.appendChild(card);
+  }
+  div.appendChild(av); div.appendChild(wrap);
+  chatWrap.appendChild(div); scrollBottom();
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg ai'; div.id = 'typing';
+  div.innerHTML = `<div class="avatar">🐾</div>
+    <div class="bubble-wrap"><div class="typing-bubble">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div></div>`;
+  chatWrap.appendChild(div); scrollBottom();
+}
+function removeTyping() { document.getElementById('typing')?.remove(); }
+
+// ── 펫 선택 ──
+function showPetSelect() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `<div class="avatar">🐾</div>
+    <div class="bubble-wrap">
+      <div class="bubble">안녕하세요! 반려동물 증상 AI 상담입니다 🐾<br>어떤 반려동물의 증상을 상담하실 건가요?</div>
+      <div class="pet-select" id="pet-row">
+        <button class="pet-btn" data-pet="강아지">🐶 강아지</button>
+        <button class="pet-btn" data-pet="고양이">🐱 고양이</button>
+        <button class="pet-btn" data-pet="토끼">🐰 토끼</button>
+        <button class="pet-btn" data-pet="기타">🐾 기타</button>
+      </div>
+    </div>`;
+  chatWrap.appendChild(div); scrollBottom();
+  document.getElementById('pet-row').addEventListener('click', e => {
+    const btn = e.target.closest('.pet-btn');
+    if (!btn) return;
+    selectedPet = btn.dataset.pet;
+    document.querySelectorAll('.pet-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    setTimeout(() => {
+      document.getElementById('pet-row').innerHTML =
+        `<span style="font-size:12px;color:#9A9A9A">${selectedPet} 선택됨</span>`;
+      step = 1; sendBtn.disabled = false;
+      callAI([{ role:'user', content:`${selectedPet} 보호자입니다. 증상 상담을 받고 싶어요.` }]);
+    }, 250);
+  });
+}
+
+// ── AI 호출 ──
+async function callAI(msgs) {
+  addTyping(); sendBtn.disabled = true;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM + `\n\n반려동물: ${selectedPet}` + (petName ? ` (이름: ${petName})` : ''),
+        messages: msgs,
+      })
+    });
+    const data = await res.json();
+    removeTyping(); sendBtn.disabled = false;
+    const raw = data.content?.map(c => c.text||'').join('') || '';
+    let display = raw, urgency = null;
+    const jm = raw.match(/\{[\s\S]*?"urgency"[\s\S]*?\}/);
+    if (jm) { try { urgency = JSON.parse(jm[0]); } catch(e){} display = raw.replace(jm[0],'').trim(); }
+    history.push({ role:'assistant', content: raw });
+    addMsg('ai', display, urgency);
+  } catch(e) {
+    removeTyping(); sendBtn.disabled = false;
+    addMsg('ai', '오류가 발생했어요. API 키를 확인하거나 잠시 후 다시 시도해 주세요.');
+  }
+}
+
+async function send() {
+  const text = inputEl.value.trim();
+  if (!text || sendBtn.disabled || step === 0) return;
+  inputEl.value = ''; inputEl.style.height = 'auto';
+  addMsg('user', text);
+  history.push({ role:'user', content: text });
+  const nm = text.match(/([가-힣]{1,5})(이|가|은|는)/);
+  if (nm && !petName) petName = nm[1];
+  await callAI([...history]);
+}
+
+sendBtn.addEventListener('click', send);
+inputEl.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} });
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 80) + 'px';
+  if (step > 0) sendBtn.disabled = inputEl.value.trim() === '';
+});
+</script>
+</body>
+</html>
