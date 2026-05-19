@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "반려동물 증상 AI",
+    "slug": "pet-symptom-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F5F0"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.yourname.petsymptom",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "음성 입력을 위해 사용됩니다."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#3D6B2F"
+      },
+      "package": "com.yourname.petsymptom"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "petsymptom"
+  }
+}
